@@ -1,0 +1,11 @@
+name = "condo-manager-ai"
+pages_build_output_dir = "dist"
+
+[vars]
+# Add environment variables if needed for server-side
+# VITE_SUPABASE_URL = "..."
+# VITE_SUPABASE_ANON_KEY = "..."
+
+[build]
+command = "npm run build"
+watch_dir = "src"
