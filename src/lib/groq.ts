@@ -1,5 +1,7 @@
+import { supabase } from "@/integrations/supabase/client";
+
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
-const GROQ_MODEL = import.meta.env.VITE_GROQ_MODEL || "openai/gpt-oss-120b";
+const GROQ_MODEL = import.meta.env.VITE_GROQ_MODEL || "llama-3.3-70b-versatile";
 
 export interface ChatMessage {
     role: "system" | "user" | "assistant" | "tool";
@@ -65,7 +67,7 @@ export const queryGroq = async (messages: ChatMessage[]) => {
         body: JSON.stringify({
             messages,
             model: GROQ_MODEL,
-            temperature: 0.1, // Lower temperature for tool use
+            temperature: 0.1,
             max_tokens: 1024,
             tools: tools,
             tool_choice: "auto",
@@ -79,4 +81,34 @@ export const queryGroq = async (messages: ChatMessage[]) => {
 
     const data = await response.json();
     return data.choices[0].message;
+};
+
+/**
+ * System Context Generator
+ * Enriches the AI with real-time data about the current condominium
+ */
+export const getAISystemPrompt = async (condoId: string) => {
+    const { data: condo } = await supabase.from("condominios").select("*").eq("id", condoId).single();
+    const { data: obrigacoes } = await supabase.from("obrigacoes").select("*").eq("condominio_id", condoId);
+    const { data: tarefas } = await supabase.from("tarefas_checkin").select("*").eq("condominio_id", condoId);
+
+    const context = `
+    VOCÊ É O ASSISTENTE SINDIPRO.
+    Atuando no condomínio: ${condo?.nome || 'Não identificado'}.
+    ID do Condomínio: ${condoId}.
+
+    STATUS ATUAL:
+    - Obrigações: ${obrigacoes?.length || 0} cadastradas.
+    - Tarefas Operacionais: ${tarefas?.length || 0} no roteiro.
+    - Vencimentos: ${obrigacoes?.filter(o => o.status === 'vencida').map(o => o.nome).join(', ') || 'Nenhum crítico'}.
+
+    VOCÊ PODE:
+    1. Agendar novas obrigações usando a ferramenta 'add_obrigacao'.
+    2. Consultar o panorama geral.
+    3. Auxiliar em dúvidas de gestão.
+
+    Dê respostas curtas e objetivas em Português (BR). Use Markdown.
+    `;
+
+    return context;
 };
