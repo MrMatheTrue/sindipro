@@ -1,4 +1,4 @@
-name = "condo-manager-ai"
+name = "sindipro"
 pages_build_output_dir = "dist"
 
 [vars]
