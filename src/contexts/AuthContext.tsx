@@ -50,27 +50,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (error) {
-        console.error("Error fetching profile with role:", error);
+        // If 'role' column is missing or any other error, try a minimal fetch
+        const { data: fallbackData } = await supabase
+          .from("profiles")
+          .select("id, full_name, email, phone, avatar_url")
+          .eq("id", userId)
+          .maybeSingle();
 
-        // If error suggests column missing, try without it
-        if (error.message.includes("role") || error.code === "PGRST204") {
-          const { data: fallbackData, error: fallbackError } = await supabase
-            .from("profiles")
-            .select("id, full_name, email, phone, avatar_url")
-            .eq("id", userId)
-            .maybeSingle();
-
-          if (fallbackData) {
-            setProfile({ ...fallbackData, role: "sindico" } as Profile);
-            return;
-          }
-          if (fallbackError) console.error("Fallback profile fetch failed:", fallbackError);
+        if (fallbackData) {
+          setProfile({ ...fallbackData, role: "sindico" } as Profile);
         }
       } else if (data) {
         setProfile(data as Profile);
       }
     } catch (err) {
-      console.error("Unexpected error in fetchProfile:", err);
+      console.error("fetchProfile unexpected error:", err);
     }
   };
 
@@ -81,29 +75,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+    // 1. Initial session check
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
         if (session?.user) {
-          try {
-            await fetchProfile(session.user.id);
-          } catch (e) {
-            console.error("onAuthStateChange profile fetch error:", e);
+          // Do NOT await fetchProfile here to avoid blocking the initial load
+          fetchProfile(session.user.id);
+        }
+      } catch (e) {
+        console.error("Initial session check error:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+
+    // 2. Auth state change subscription
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        setSession(currentSession);
+
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (currentSession?.user) {
+            fetchProfile(currentSession.user.id);
           }
-        } else {
+        } else if (event === 'SIGNED_OUT') {
           setProfile(null);
         }
+
         setLoading(false);
       }
     );
-
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      }
-      setLoading(false);
-    });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -111,9 +116,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setProfile(null);
+    setSession(null);
   };
 
-  const isSindico = profile?.role === "sindico" || !profile?.role || profile?.role === "funcionario" || profile?.role === "zelador";
+  // Safe defaults: if no profile, treated as sindico to avoid blocking management
+  const isSindico = !profile || profile.role === "sindico" || profile.role === "zelador" || profile.role === "funcionario";
   const isColaborador = profile?.role === "colaborador";
 
   return (

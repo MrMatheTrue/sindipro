@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Building2, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,10 +18,15 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password
+      });
 
       if (error) {
         toast({
@@ -36,22 +41,19 @@ const Login = () => {
       }
 
       if (data?.user) {
-        // Navigate to dashboard and let the App routing logic handle the rest
-        // This avoids hanging on legacy role checks
+        // Just navigate. AuthContext will catch the event and update state.
         navigate("/dashboard");
+      } else {
+        setLoading(false);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Login unexpected error:", err);
       toast({
         variant: "destructive",
         title: "Erro inesperado",
-        description: "Ocorreu um erro ao processar seu login. Tente novamente.",
+        description: "Ocorreu um erro ao processar seu login.",
       });
-    } finally {
-      // In case navigation doesn't happen, ensure we stop loading
-      // But usually navigate will unmount the component
-      const timer = setTimeout(() => setLoading(false), 2000);
-      return () => clearTimeout(timer);
+      setLoading(false);
     }
   };
 
@@ -74,7 +76,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 gradient-hero">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md bg-card/95 backdrop-blur-sm shadow-2xl">
         <CardHeader className="text-center">
           <Link to="/" className="flex items-center justify-center gap-2 mb-2">
             <Building2 className="h-7 w-7 text-primary" />
@@ -109,20 +111,19 @@ const Login = () => {
                 disabled={loading}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Entrar
+            <Button type="submit" className="w-full font-bold h-11" disabled={loading}>
+              {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Entrar"}
             </Button>
           </form>
 
           <div className="relative my-6">
             <Separator />
-            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground">
+            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground font-medium uppercase tracking-widest">
               ou
             </span>
           </div>
 
-          <Button variant="outline" className="w-full" onClick={handleGoogleLogin}>
+          <Button variant="outline" className="w-full h-11 font-medium bg-secondary/20 border-secondary/30 hover:bg-secondary/40 transition-all" onClick={handleGoogleLogin} disabled={loading}>
             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
               <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -134,7 +135,7 @@ const Login = () => {
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Não tem conta?{" "}
-            <Link to="/register" className="text-primary hover:underline font-medium">
+            <Link to="/register" className="text-primary hover:underline font-bold">
               Cadastre-se grátis
             </Link>
           </p>
