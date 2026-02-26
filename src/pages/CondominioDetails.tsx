@@ -9,21 +9,71 @@ const CondominioDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
 
-    const { data: condo, isLoading } = useQuery({
+    const { data: condo, isLoading, isError } = useQuery({
         queryKey: ["condominio", id],
         queryFn: async () => {
-            const { data, error } = await supabase.from("condominios").select("*").eq("id", id).single();
+            const { data, error } = await supabase
+                .from("condominios")
+                .select("*")
+                .eq("id", id)
+                .single();
             if (error) throw error;
             return data;
         },
+        retry: 1,
+        enabled: !!id,
     });
 
     const { data: obrigacoesCount } = useQuery({
         queryKey: ["obrigacoes-count", id],
         queryFn: async () => {
-            const { count, error } = await supabase.from("obrigacoes").select("*", { count: 'exact', head: true }).eq("condominio_id", id);
+            const { count } = await supabase
+                .from("obrigacoes")
+                .select("*", { count: "exact", head: true })
+                .eq("condominio_id", id);
             return count ?? 0;
-        }
+        },
+        retry: 1,
+        enabled: !!id,
+    });
+
+    const { data: membrosCount } = useQuery({
+        queryKey: ["membros-count", id],
+        queryFn: async () => {
+            const { count } = await supabase
+                .from("condominio_acessos")
+                .select("*", { count: "exact", head: true })
+                .eq("condominio_id", id)
+                .eq("status", "aprovado");
+            return (count ?? 0) + 1; // +1 para o próprio síndico
+        },
+        retry: 1,
+        enabled: !!id,
+    });
+
+    const { data: checkinHoje } = useQuery({
+        queryKey: ["checkin-hoje-count", id],
+        queryFn: async () => {
+            const today = new Date().toISOString().split("T")[0];
+            const { data: tarefas } = await supabase
+                .from("tarefas_checkin")
+                .select("id", { count: "exact" })
+                .eq("condominio_id", id)
+                .eq("status_ativo", true);
+
+            const { data: execucoes } = await supabase
+                .from("execucoes_checkin")
+                .select("id", { count: "exact" })
+                .eq("condominio_id", id)
+                .gte("data_execucao", today);
+
+            return {
+                total: tarefas?.length ?? 0,
+                feitas: execucoes?.length ?? 0,
+            };
+        },
+        retry: 1,
+        enabled: !!id,
     });
 
     if (isLoading) return (
@@ -31,7 +81,16 @@ const CondominioDetails = () => {
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </div>
     );
-    if (!condo) return <div className="p-8 text-center font-bold">Condomínio não encontrado.</div>;
+
+    // ✅ FIX: erro de carregamento não trava infinitamente
+    if (isError || !condo) return (
+        <div className="p-8 text-center space-y-4">
+            <p className="font-bold text-destructive">Erro ao carregar condomínio.</p>
+            <Button variant="outline" onClick={() => navigate("/dashboard")}>
+                Voltar ao Dashboard
+            </Button>
+        </div>
+    );
 
     const modules = [
         { title: "Obrigações", icon: Calendar, url: `/condominios/${id}/obrigacoes`, color: "text-orange-500", desc: "Controle de AVCB, Seguros, Limpezas" },
@@ -44,7 +103,8 @@ const CondominioDetails = () => {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-4">
                 <div className="flex items-center gap-4">
-                    <Button variant="outline" size="icon" onClick={() => navigate("/dashboard")} className="rounded-full shadow-sm">
+                    {/* ✅ FIX: navigate(-1) volta para a página anterior no histórico */}
+                    <Button variant="outline" size="icon" onClick={() => navigate(-1)} className="rounded-full shadow-sm">
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
                     <div>
@@ -53,8 +113,12 @@ const CondominioDetails = () => {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline"><Users className="mr-2 h-4 w-4" /> Gerenciar Equipe</Button>
-                    <Button onClick={() => navigate(`/ia`)}><Building2 className="mr-2 h-4 w-4" /> Falar com IA</Button>
+                    <Button variant="outline" onClick={() => navigate(`/condominios/${id}/equipe`)}>
+                        <Users className="mr-2 h-4 w-4" /> Gerenciar Equipe
+                    </Button>
+                    <Button onClick={() => navigate(`/ia`)}>
+                        <Building2 className="mr-2 h-4 w-4" /> Falar com IA
+                    </Button>
                 </div>
             </div>
 
@@ -69,19 +133,21 @@ const CondominioDetails = () => {
                 <Card className="border-none shadow-sm bg-orange-500/5">
                     <CardContent className="p-6">
                         <div className="text-orange-500 mb-2 italic text-xs font-bold uppercase">Obrigações</div>
-                        <div className="text-3xl font-bold">{obrigacoesCount}</div>
+                        <div className="text-3xl font-bold">{obrigacoesCount ?? 0}</div>
                     </CardContent>
                 </Card>
                 <Card className="border-none shadow-sm bg-green-500/5">
                     <CardContent className="p-6">
                         <div className="text-green-500 mb-2 italic text-xs font-bold uppercase">Check-in Hoje</div>
-                        <div className="text-3xl font-bold">0/0</div>
+                        <div className="text-3xl font-bold">
+                            {checkinHoje ? `${checkinHoje.feitas}/${checkinHoje.total}` : "0/0"}
+                        </div>
                     </CardContent>
                 </Card>
                 <Card className="border-none shadow-sm bg-purple-500/5">
                     <CardContent className="p-6">
                         <div className="text-purple-500 mb-2 italic text-xs font-bold uppercase">Membros</div>
-                        <div className="text-3xl font-bold">1</div>
+                        <div className="text-3xl font-bold">{membrosCount ?? 1}</div>
                     </CardContent>
                 </Card>
             </div>
@@ -90,7 +156,11 @@ const CondominioDetails = () => {
             <h2 className="text-xl font-bold font-display px-1">Módulos de Gestão</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {modules.map((m) => (
-                    <Card key={m.title} className="group hover:border-primary/50 cursor-pointer transition-all duration-300 shadow-sm hover:shadow-xl bg-card/40 backdrop-blur-sm" onClick={() => navigate(m.url)}>
+                    <Card
+                        key={m.title}
+                        className="group hover:border-primary/50 cursor-pointer transition-all duration-300 shadow-sm hover:shadow-xl bg-card/40 backdrop-blur-sm"
+                        onClick={() => navigate(m.url)}
+                    >
                         <CardContent className="p-8 flex flex-col items-center justify-center text-center gap-6">
                             <div className={`p-6 rounded-2xl bg-card border shadow-inner group-hover:scale-110 transition-transform duration-300 ${m.color}`}>
                                 <m.icon className="h-10 w-10" />

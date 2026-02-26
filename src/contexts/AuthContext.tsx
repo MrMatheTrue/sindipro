@@ -8,7 +8,7 @@ interface Profile {
   email: string;
   phone: string | null;
   avatar_url: string | null;
-  role: string; // 'sindico' | 'colaborador'
+  role: string;
 }
 
 interface AuthContextType {
@@ -22,12 +22,12 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
 }
 
+// ✅ FIX: default isSindico: false — evita flash de acesso indevido durante loading
 const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   loading: true,
   profile: null,
-  // ✅ FIX: defaults false — evita "flash" de acesso de síndico durante loading
   isSindico: false,
   isColaborador: false,
   signOut: async () => { },
@@ -51,22 +51,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error || !data) {
         // Fallback sem coluna role
-        const { data: fallbackData } = await supabase
+        const { data: fb } = await supabase
           .from("profiles")
           .select("id, full_name, email, phone, avatar_url")
           .eq("id", userId)
           .maybeSingle();
-
-        if (fallbackData) {
-          const p = { ...fallbackData, role: "sindico" } as Profile;
+        if (fb) {
+          const p = { ...fb, role: "sindico" } as Profile;
           setProfile(p);
           return p;
         }
         return null;
       }
 
-      setProfile(data as Profile);
-      return data as Profile;
+      // Se role vier null do banco, assume sindico (dados antigos)
+      const p = { ...data, role: data.role ?? "sindico" } as Profile;
+      setProfile(p);
+      return p;
     } catch (err) {
       console.error("fetchProfile error:", err);
       return null;
@@ -74,9 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshProfile = async () => {
-    if (session?.user?.id) {
-      await fetchProfile(session.user.id);
-    }
+    if (session?.user?.id) await fetchProfile(session.user.id);
   };
 
   useEffect(() => {
@@ -85,17 +84,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(currentSession);
 
         if (currentSession?.user) {
-          const userId = currentSession.user.id;
-
-          // ✅ FIX: Aplicar pending_role do OAuth ANTES de buscar o perfil
+          // Aplicar pending_role vindo de OAuth (localStorage)
           const pendingRole = localStorage.getItem("pending_role");
           if (pendingRole) {
             try {
               await supabase.from("profiles").upsert({
-                id: userId,
+                id: currentSession.user.id,
                 role: pendingRole,
-                full_name: currentSession.user.user_metadata?.full_name || "",
-                email: currentSession.user.email || "",
+                full_name: currentSession.user.user_metadata?.full_name ?? "",
+                email: currentSession.user.email ?? "",
               });
               localStorage.removeItem("pending_role");
             } catch (err) {
@@ -103,26 +100,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
 
-          const loadedProfile = await fetchProfile(userId);
+          const loadedProfile = await fetchProfile(currentSession.user.id);
 
-          // ✅ FIX: Redirecionar novo usuário Google para tela correta
-          if (event === "SIGNED_IN" && currentSession.user.app_metadata?.provider === "google") {
-            // Verifica se é novo usuário (criado há menos de 30 segundos)
-            const createdAt = new Date(currentSession.user.created_at).getTime();
-            const isNewUser = Date.now() - createdAt < 30000;
+          // ✅ FIX: Redirecionar usuário OAuth novo para o fluxo correto
+          if (event === "SIGNED_IN" && loadedProfile) {
+            const isNew = (() => {
+              try {
+                const created = new Date(currentSession.user.created_at).getTime();
+                return Date.now() - created < 60_000; // criado há menos de 60s
+              } catch { return false; }
+            })();
 
-            if (isNewUser && loadedProfile) {
-              const targetRole = pendingRole || loadedProfile.role;
-              if (targetRole === "colaborador") {
+            if (isNew) {
+              if (loadedProfile.role === "colaborador") {
                 window.location.href = "/selecionar-condominio";
-              } else {
-                // Verifica se já tem condomínio cadastrado
-                const { data: condos } = await supabase
+              } else if (loadedProfile.role === "sindico") {
+                // Verificar se já tem condomínio
+                const { count } = await supabase
                   .from("condominios")
-                  .select("id")
-                  .eq("sindico_id", userId)
-                  .limit(1);
-                if (!condos || condos.length === 0) {
+                  .select("id", { count: "exact", head: true })
+                  .eq("sindico_id", currentSession.user.id);
+                if (!count || count === 0) {
                   window.location.href = "/onboarding";
                 }
               }
@@ -136,24 +134,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
     } catch (error) {
-      console.error("Error signing out:", error);
+      console.error("signOut error:", error);
     } finally {
       setProfile(null);
       setSession(null);
     }
   };
 
-  // ✅ FIX: defaults false — usuário sem perfil carregado não tem permissão alguma
-  const isSindico = !!profile && (profile.role === "sindico" || profile.role === "zelador" || profile.role === "funcionario" || profile.role === "admin");
+  // ✅ FIX: isSindico = false enquanto loading para evitar acesso prematuro
+  const isSindico = !!profile && (
+    profile.role === "sindico" ||
+    profile.role === "admin" ||
+    profile.role === "zelador" ||
+    profile.role === "funcionario"
+  );
   const isColaborador = !!profile && profile.role === "colaborador";
 
   return (

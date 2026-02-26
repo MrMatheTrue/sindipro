@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Building2, AlertTriangle, ClipboardCheck, FileText, Plus, ArrowRight, Loader2, CheckCircle2, Circle, Clock, ClipboardList } from "lucide-react";
+import { Building2, AlertTriangle, ClipboardCheck, FileText, Plus, ArrowRight, Loader2, CheckCircle2, Circle, ClipboardList } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -19,7 +19,7 @@ const statusConfig = {
   em_dia: { label: "Em dia", className: "bg-success/15 text-success border-success/30" },
 } as const;
 
-// ── Colaborador Dashboard ────────────────────────────────────────────────────
+// ── Colaborador Dashboard ─────────────────────────────────────────────────────
 function ColaboradorDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -59,7 +59,7 @@ function ColaboradorDashboard() {
   const { data: execucoesHoje } = useQuery({
     queryKey: ["execucoes-hoje-colaborador", condominioId, user?.id],
     queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().split("T")[0];
       const { data, error } = await supabase
         .from("execucoes_checkin")
         .select("tarefa_id, data_execucao")
@@ -86,11 +86,11 @@ function ColaboradorDashboard() {
     enabled: !!condominioId,
   });
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split("T")[0];
   const executadasHoje = execucoesHoje?.length ?? 0;
   const totalTarefas = tarefas?.length ?? 0;
   const pendentesHoje = totalTarefas - executadasHoje;
-  const obrigacoesAlerta = obrigacoes?.filter(o => o.status !== "em_dia").length ?? 0;
+  const obrigacoesAlerta = obrigacoes?.filter((o) => o.status !== "em_dia").length ?? 0;
 
   const kpis = [
     { label: "Tarefas do Dia", value: totalTarefas, icon: ClipboardList, color: "text-blue-500", bg: "bg-blue-500/10" },
@@ -108,7 +108,6 @@ function ColaboradorDashboard() {
         </p>
       </div>
 
-      {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi) => (
           <Card key={kpi.label} className="border-none shadow-sm bg-card/50 backdrop-blur-sm">
@@ -125,11 +124,11 @@ function ColaboradorDashboard() {
         ))}
       </div>
 
-      {/* Quick Access */}
       <div className="grid md:grid-cols-2 gap-5">
-        {/* Check-in card */}
-        <Card className="group hover:shadow-xl hover:border-primary/40 transition-all duration-300 overflow-hidden bg-card/60 border-primary/20 cursor-pointer"
-          onClick={() => condominioId && navigate(`/condominios/${condominioId}/checkin`)}>
+        <Card
+          className="group hover:shadow-xl hover:border-primary/40 transition-all duration-300 cursor-pointer bg-card/60 border-primary/20"
+          onClick={() => condominioId && navigate(`/condominios/${condominioId}/checkin`)}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-bold flex items-center gap-2 group-hover:text-primary transition-colors">
               <CheckCircle2 className="h-5 w-5 text-primary" />
@@ -139,27 +138,17 @@ function ColaboradorDashboard() {
           </CardHeader>
           <CardContent className="space-y-2 pt-0">
             {tarefas?.slice(0, 3).map((t) => {
-              const done = execucoesHoje?.some(e => e.tarefa_id === t.id);
+              const done = execucoesHoje?.some((e) => e.tarefa_id === t.id);
               return (
-                <div key={t.id} className={`flex items-center gap-3 p-2.5 rounded-lg ${done ? 'bg-success/5' : 'bg-muted/40'}`}>
+                <div key={t.id} className={`flex items-center gap-3 p-2.5 rounded-lg ${done ? "bg-success/5" : "bg-muted/40"}`}>
                   {done
                     ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
                     : <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
                   }
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium truncate ${done ? 'line-through text-muted-foreground' : ''}`}>{t.titulo}</p>
-                    {t.horario_previsto && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" />{t.horario_previsto}
-                      </p>
-                    )}
-                  </div>
+                  <p className={`text-sm font-medium truncate ${done ? "line-through text-muted-foreground" : ""}`}>{t.titulo}</p>
                 </div>
               );
             })}
-            {totalTarefas > 3 && (
-              <p className="text-xs text-muted-foreground text-center pt-1">+{totalTarefas - 3} outras tarefas</p>
-            )}
             {totalTarefas === 0 && (
               <p className="text-sm text-muted-foreground italic text-center py-2">Nenhuma tarefa ativa</p>
             )}
@@ -169,9 +158,10 @@ function ColaboradorDashboard() {
           </CardContent>
         </Card>
 
-        {/* Obrigações card */}
-        <Card className="group hover:shadow-xl hover:border-amber-500/40 transition-all duration-300 overflow-hidden bg-card/60 border-amber-500/10 cursor-pointer"
-          onClick={() => condominioId && navigate(`/condominios/${condominioId}/obrigacoes`)}>
+        <Card
+          className="group hover:shadow-xl hover:border-amber-500/40 transition-all duration-300 cursor-pointer bg-card/60 border-amber-500/10"
+          onClick={() => condominioId && navigate(`/condominios/${condominioId}/obrigacoes`)}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-bold flex items-center gap-2 group-hover:text-amber-500 transition-colors">
               <ClipboardList className="h-5 w-5 text-amber-500" />
@@ -184,8 +174,8 @@ function ColaboradorDashboard() {
               <div key={o.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 gap-2">
                 <p className="text-sm font-medium truncate flex-1">{o.nome}</p>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase border shrink-0 ${o.status === "vencida" ? "bg-red-500/10 text-red-600 border-red-200" :
-                  o.status === "atencao" ? "bg-amber-500/10 text-amber-600 border-amber-200" :
-                    "bg-emerald-500/10 text-emerald-600 border-emerald-200"
+                    o.status === "atencao" ? "bg-amber-500/10 text-amber-600 border-amber-200" :
+                      "bg-emerald-500/10 text-emerald-600 border-emerald-200"
                   }`}>
                   {o.status?.replace("_", " ")}
                 </span>
@@ -204,16 +194,15 @@ function ColaboradorDashboard() {
   );
 }
 
-// ── Síndico Dashboard ────────────────────────────────────────────────────────
+// ── Síndico Dashboard ─────────────────────────────────────────────────────────
 const Dashboard = () => {
-  const { user, isSindico } = useAuth();
+  const { user, isSindico, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
-
   const [nome, setNome] = useState("");
   const [endereco, setEndereco] = useState("");
   const [cidade, setCidade] = useState("");
@@ -221,42 +210,43 @@ const Dashboard = () => {
   const [unidades, setUnidades] = useState("");
   const [cnpj, setCnpj] = useState("");
 
-  // Redirect to colaborador view
-  if (!isSindico) {
-    return <ColaboradorDashboard />;
-  }
-
+  // ✅ FIX: Todos os hooks ANTES de qualquer return condicional (React Rules of Hooks)
   const { data: condominios, isLoading } = useQuery({
     queryKey: ["condominios", user?.id],
     queryFn: async () => {
-      if (!user) return [];
       const { data, error } = await supabase
         .from("condominios")
         .select("*")
-        .eq("sindico_id", user.id)
+        .eq("sindico_id", user!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
-    enabled: !!user,
+    enabled: !!user && isSindico, // só executa se for síndico
+    retry: 1,
   });
 
   const { data: obrigacoes } = useQuery({
-    queryKey: ["obrigacoes-summary"],
+    queryKey: ["obrigacoes-summary", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("obrigacoes").select("id, condominio_id, status, data_proxima_realizacao");
+      const { data, error } = await supabase
+        .from("obrigacoes")
+        .select("id, condominio_id, status, data_proxima_realizacao");
       if (error) throw error;
       return data;
     },
+    enabled: !!user && isSindico,
   });
 
   const { data: docsCount } = useQuery({
-    queryKey: ["docs-count"],
+    queryKey: ["docs-count", user?.id],
     queryFn: async () => {
-      const { count, error } = await supabase.from("documentos").select("*", { count: 'exact', head: true });
-      if (error) throw error;
+      const { count } = await supabase
+        .from("documentos")
+        .select("*", { count: "exact", head: true });
       return count || 0;
-    }
+    },
+    enabled: !!user && isSindico,
   });
 
   const createMutation = useMutation({
@@ -283,26 +273,40 @@ const Dashboard = () => {
     },
   });
 
+  // ✅ FIX: condicional DEPOIS de todos os hooks
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isSindico) {
+    return <ColaboradorDashboard />;
+  }
+
   const getCondoStatus = (condoId: string) => {
     if (!obrigacoes) return "em_dia";
-    const condoObrigacoes = obrigacoes.filter((o) => o.condominio_id === condoId);
-    if (condoObrigacoes.some((o) => o.status === "vencida")) return "critico";
-    if (condoObrigacoes.some((o) => o.status === "atencao")) return "atencao";
+    const co = obrigacoes.filter((o) => o.condominio_id === condoId);
+    if (co.some((o) => o.status === "vencida")) return "critico";
+    if (co.some((o) => o.status === "atencao")) return "atencao";
     return "em_dia";
   };
 
-  const filteredCondos = condominios?.filter(c => {
+  const filteredCondos = condominios?.filter((c) => {
     const matchesSearch = c.nome.toLowerCase().includes(searchTerm.toLowerCase());
     const status = getCondoStatus(c.id);
     const matchesStatus = statusFilter === "todos" || status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
+  const totalAlerts = obrigacoes?.filter((o) => o.status === "vencida").length ?? 0;
   const totalObrigacoesVencendo = obrigacoes?.filter((o) => o.status === "vencida" || o.status === "atencao").length ?? 0;
 
   const kpis = [
     { label: "Condomínios", value: condominios?.length ?? 0, icon: Building2, color: "text-blue-500", bg: "bg-blue-500/10" },
-    { label: "Alertas Críticos", value: obrigacoes?.filter(o => o.status === 'vencida').length ?? 0, icon: AlertTriangle, color: "text-red-500", bg: "bg-red-500/10" },
+    { label: "Alertas Críticos", value: totalAlerts, icon: AlertTriangle, color: "text-red-500", bg: "bg-red-500/10" },
     { label: "Obrigações / Mês", value: totalObrigacoesVencendo, icon: ClipboardCheck, color: "text-orange-500", bg: "bg-orange-500/10" },
     { label: "Documentos", value: docsCount ?? 0, icon: FileText, color: "text-emerald-500", bg: "bg-emerald-500/10" },
   ];
@@ -316,7 +320,9 @@ const Dashboard = () => {
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="shadow-lg shadow-primary/20"><Plus className="mr-2 h-4 w-4" /> Novo Condomínio</Button>
+            <Button className="shadow-lg shadow-primary/20">
+              <Plus className="mr-2 h-4 w-4" /> Novo Condomínio
+            </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
@@ -355,7 +361,8 @@ const Dashboard = () => {
                 </div>
               </div>
               <Button type="submit" className="w-full mt-2" disabled={createMutation.isPending}>
-                {createMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Criar Condomínio"}
+                {createMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Criar Condomínio
               </Button>
             </form>
           </DialogContent>
@@ -365,118 +372,116 @@ const Dashboard = () => {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi) => (
-          <Card key={kpi.label} className="border-none shadow-sm bg-card/50 backdrop-blur-sm">
+          <Card key={kpi.label} className="border-none shadow-sm bg-card/50">
             <CardContent className="p-6 flex items-center gap-4">
               <div className={`p-3 rounded-2xl ${kpi.bg} ${kpi.color}`}>
                 <kpi.icon className="h-6 w-6" />
               </div>
               <div>
                 <p className="text-3xl font-bold tracking-tight">{kpi.value}</p>
-                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{kpi.label}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{kpi.label}</p>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4">
+      {/* Filtros */}
+      <div className="flex flex-col md:flex-row gap-3 items-center">
         <div className="relative flex-1">
+          <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por nome do condomínio..."
             className="pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <Building2 className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
         </div>
-        <div className="flex gap-2 shrink-0 overflow-x-auto pb-2 md:pb-0">
-          {(['todos', 'critico', 'atencao', 'em_dia'] as const).map((s) => (
+        <div className="flex gap-2">
+          {["todos", "critico", "atencao", "em_dia"].map((f) => (
             <Button
-              key={s}
-              variant={statusFilter === s ? "default" : "outline"}
+              key={f}
+              variant={statusFilter === f ? "default" : "outline"}
               size="sm"
-              onClick={() => setStatusFilter(s)}
-              className="capitalize whitespace-nowrap"
+              onClick={() => setStatusFilter(f)}
+              className="capitalize"
             >
-              {s.replace('_', ' ')}
+              {f === "todos" ? "Todos" : f === "critico" ? "Crítico" : f === "atencao" ? "Atenção" : "Em Dia"}
             </Button>
           ))}
         </div>
       </div>
 
-      {/* Condominios Grid */}
-      <div>
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <p className="text-muted-foreground font-medium">Sincronizando condomínios...</p>
-          </div>
-        ) : filteredCondos?.length === 0 ? (
-          <Card className="p-20 text-center border-dashed bg-muted/20">
-            <Building2 className="h-16 w-16 mx-auto text-muted-foreground/40 mb-6" />
-            <h3 className="text-xl font-bold mb-2">Nada por aqui</h3>
-            <p className="text-muted-foreground mb-6 max-w-xs mx-auto">
-              Nenhum condomínio encontrado com os filtros atuais.
-            </p>
-            <Button onClick={() => { setStatusFilter("todos"); setSearchTerm(""); }}>
-              Limpar Filtros
-            </Button>
-          </Card>
-        ) : (
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredCondos?.map((condo) => {
-              const statusKey = getCondoStatus(condo.id) as keyof typeof statusConfig;
-              const status = statusConfig[statusKey];
-              const obrigacoesCondo = obrigacoes?.filter((o) => o.condominio_id === condo.id) ?? [];
-              const alerts = obrigacoesCondo.filter((o) => o.status !== "em_dia").length;
+      {/* Lista de condomínios */}
+      {isLoading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredCondos?.map((condo) => {
+            const statusKey = getCondoStatus(condo.id) as keyof typeof statusConfig;
+            const status = statusConfig[statusKey];
+            const alerts = obrigacoes?.filter(
+              (o) => o.condominio_id === condo.id && (o.status === "vencida" || o.status === "atencao")
+            ).length ?? 0;
+            const initial = condo.nome.charAt(0).toUpperCase();
 
-              return (
-                <Card key={condo.id} className="hover:shadow-xl hover:border-primary/40 transition-all duration-300 group relative overflow-hidden bg-card/60">
-                  <div className={`absolute top-0 left-0 w-1 h-full ${statusKey === 'critico' ? 'bg-red-500' :
-                    statusKey === 'atencao' ? 'bg-orange-500' : 'bg-emerald-500'
-                    }`} />
-                  <CardHeader className="pb-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-xl shadow-inner uppercase">
-                          {condo.nome.charAt(0)}
-                        </div>
-                        <div>
-                          <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors">{condo.nome}</CardTitle>
-                          <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">
-                            {condo.endereco ? condo.endereco : "Endereço não cadastrado"}
-                          </p>
-                        </div>
-                      </div>
+            return (
+              <Card
+                key={condo.id}
+                className={`group hover:shadow-xl transition-all duration-300 cursor-pointer bg-card/60 border-l-4 ${statusKey === "critico" ? "border-l-destructive" :
+                    statusKey === "atencao" ? "border-l-warning" : "border-l-success"
+                  }`}
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-primary/15 flex items-center justify-center font-bold text-primary shrink-0">
+                      {initial}
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/40">
-                      <div className="flex items-center gap-2">
-                        <span className={`h-2 w-2 rounded-full ${statusKey === 'critico' ? 'bg-red-500 animate-pulse' :
-                          statusKey === 'atencao' ? 'bg-orange-500' : 'bg-emerald-500'
-                          }`} />
-                        <span className="text-xs font-bold uppercase tracking-wider">{status.label}</span>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm font-medium">
-                        <span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" /> {condo.numero_unidades ?? 0}</span>
-                        <span className={`flex items-center gap-1.5 ${alerts > 0 ? 'text-orange-500' : ''}`}><AlertTriangle className="h-3.5 w-3.5" /> {alerts}</span>
-                      </div>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base font-bold truncate">{condo.nome}</CardTitle>
+                      <p className="text-xs text-muted-foreground truncate">{condo.endereco || "Endereço não cadastrado"}</p>
                     </div>
-                    <Button
-                      className="w-full font-bold shadow-sm group-hover:shadow-md transition-all"
-                      onClick={() => navigate(`/condominios/${condo.id}`)}
-                    >
-                      Painel do Condomínio <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/40">
+                    <div className="flex items-center gap-2">
+                      <span className={`h-2 w-2 rounded-full ${statusKey === "critico" ? "bg-red-500 animate-pulse" :
+                          statusKey === "atencao" ? "bg-orange-500" : "bg-emerald-500"
+                        }`} />
+                      <span className="text-xs font-bold uppercase tracking-wider">{status.label}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm font-medium">
+                      <span className="flex items-center gap-1.5">
+                        <Building2 className="h-3.5 w-3.5" /> {condo.numero_unidades ?? 0}
+                      </span>
+                      <span className={`flex items-center gap-1.5 ${alerts > 0 ? "text-orange-500" : ""}`}>
+                        <AlertTriangle className="h-3.5 w-3.5" /> {alerts}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    className="w-full font-bold"
+                    onClick={() => navigate(`/condominios/${condo.id}`)}
+                  >
+                    Painel do Condomínio <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+
+          {filteredCondos?.length === 0 && (
+            <div className="col-span-full text-center py-20 border-2 border-dashed rounded-2xl bg-muted/20">
+              <Building2 className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+              <h3 className="text-lg font-bold">Nenhum condomínio encontrado</h3>
+              <p className="text-muted-foreground mt-1">Crie seu primeiro condomínio para começar.</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

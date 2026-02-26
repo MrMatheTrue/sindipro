@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, UserCheck, UserX, Trash2, Loader2, ShieldAlert, ArrowLeft, Clock, Mail } from "lucide-react";
+import { Users, UserCheck, UserX, Trash2, Loader2, ShieldAlert, ArrowLeft, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Equipe = () => {
@@ -12,7 +12,7 @@ const Equipe = () => {
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
-    const { data: equipe, isLoading } = useQuery({
+    const { data: equipe, isLoading, isError } = useQuery({
         queryKey: ["equipe", id],
         queryFn: async () => {
             const { data, error } = await supabase
@@ -22,6 +22,8 @@ const Equipe = () => {
             if (error) throw error;
             return data;
         },
+        retry: 1,
+        enabled: !!id,
     });
 
     const pendentes = equipe?.filter((m) => m.status === "pendente") ?? [];
@@ -66,6 +68,7 @@ const Equipe = () => {
             queryClient.invalidateQueries({ queryKey: ["equipe", id] });
             toast({ title: "Colaborador removido da equipe." });
         },
+        onError: (err: any) => toast({ variant: "destructive", title: "Erro", description: err.message }),
     });
 
     if (isLoading) return (
@@ -75,139 +78,102 @@ const Equipe = () => {
         </div>
     );
 
+    if (isError) return (
+        <div className="p-8 text-center space-y-4">
+            <p className="font-bold text-destructive">Erro ao carregar equipe.</p>
+            <Button variant="outline" onClick={() => navigate(-1)}>Voltar</Button>
+        </div>
+    );
+
+    const MemberCard = ({ m, showActions }: { m: any; showActions: boolean }) => (
+        <Card className="border-none shadow-sm bg-card/60">
+            <CardContent className="p-4 flex items-center gap-4">
+                <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center font-bold text-primary shrink-0 uppercase">
+                    {(m.profile as any)?.full_name?.charAt(0) ?? "?"}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="font-semibold truncate">{(m.profile as any)?.full_name ?? "—"}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+                        <Mail className="h-3 w-3 shrink-0" />
+                        {(m.profile as any)?.email ?? "—"}
+                    </p>
+                </div>
+                {showActions && (
+                    <div className="flex gap-2 shrink-0">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-emerald-600 border-emerald-300 hover:bg-emerald-500/10"
+                            onClick={() => aprovarMutation.mutate(m.id)}
+                            disabled={aprovarMutation.isPending}
+                        >
+                            <UserCheck className="h-4 w-4 mr-1" /> Aprovar
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 border-red-300 hover:bg-red-500/10"
+                            onClick={() => recusarMutation.mutate(m.id)}
+                            disabled={recusarMutation.isPending}
+                        >
+                            <UserX className="h-4 w-4 mr-1" /> Recusar
+                        </Button>
+                    </div>
+                )}
+                {!showActions && (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10 shrink-0"
+                        onClick={() => removerMutation.mutate(m.id)}
+                        disabled={removerMutation.isPending}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                )}
+            </CardContent>
+        </Card>
+    );
+
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="rounded-full">
+                {/* ✅ FIX: navigate(-1) */}
+                <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Equipe & Acessos</h1>
-                    <p className="text-muted-foreground mt-1">Gerencie os colaboradores do seu condomínio.</p>
+                    <h1 className="text-3xl font-bold tracking-tight">Equipe</h1>
+                    <p className="text-muted-foreground mt-1">Gerencie colaboradores e solicitações de acesso.</p>
                 </div>
             </div>
 
-            <div className="p-4 bg-blue-500/5 rounded-xl border border-dashed border-blue-500/20 text-sm text-blue-700">
-                <strong>Como funciona:</strong> Colaboradores se cadastram na plataforma, selecionam este condomínio e aguardam aqui sua aprovação. Apenas você, como síndico, pode aprovar ou recusar.
-            </div>
-
-            {/* Pendentes */}
-            <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-amber-500" />
-                    <h2 className="text-lg font-bold">Solicitações Pendentes</h2>
-                    {pendentes.length > 0 && (
-                        <span className="text-xs bg-amber-500/10 text-amber-600 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold">
-                            {pendentes.length}
-                        </span>
-                    )}
-                </div>
-
-                {pendentes.length === 0 ? (
-                    <Card className="border-dashed bg-muted/10">
-                        <CardContent className="py-8 text-center text-muted-foreground text-sm">
-                            Nenhuma solicitação pendente no momento.
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <div className="grid gap-3">
-                        {pendentes.map((mem) => (
-                            <Card key={mem.id} className="border-amber-500/20 bg-amber-500/5 shadow-sm">
-                                <CardContent className="p-4 flex flex-col md:flex-row md:items-center gap-4">
-                                    <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center shrink-0">
-                                        <Users className="h-6 w-6 text-amber-600" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-bold text-base truncate">
-                                            {(mem.profile as any)?.full_name || mem.colaborador_nome || "Colaborador"}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
-                                            <Mail className="h-3.5 w-3.5" />
-                                            {(mem.profile as any)?.email || "—"}
-                                        </p>
-                                        <span className="inline-block text-[10px] bg-amber-500/10 text-amber-700 px-2 py-0.5 rounded-full font-bold uppercase mt-1">
-                                            Aguardando aprovação
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        <Button
-                                            size="sm"
-                                            className="bg-emerald-600 hover:bg-emerald-700 font-bold"
-                                            onClick={() => aprovarMutation.mutate(mem.id)}
-                                            disabled={aprovarMutation.isPending || recusarMutation.isPending}
-                                        >
-                                            <UserCheck className="mr-1.5 h-4 w-4" /> Aprovar
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="border-destructive/40 text-destructive hover:bg-destructive/10"
-                                            onClick={() => recusarMutation.mutate(mem.id)}
-                                            disabled={aprovarMutation.isPending || recusarMutation.isPending}
-                                        >
-                                            <UserX className="mr-1.5 h-4 w-4" /> Recusar
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
+            {pendentes.length > 0 && (
+                <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                        <ShieldAlert className="h-5 w-5 text-amber-500" />
+                        <h2 className="font-bold text-lg">Solicitações Pendentes ({pendentes.length})</h2>
                     </div>
-                )}
-            </div>
+                    <div className="space-y-3">
+                        {pendentes.map((m) => <MemberCard key={m.id} m={m} showActions={true} />)}
+                    </div>
+                </div>
+            )}
 
-            {/* Equipe Ativa */}
             <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                    <UserCheck className="h-5 w-5 text-emerald-500" />
-                    <h2 className="text-lg font-bold">Equipe Ativa</h2>
-                    {aprovados.length > 0 && (
-                        <span className="text-xs bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">
-                            {aprovados.length}
-                        </span>
-                    )}
+                    <Users className="h-5 w-5 text-primary" />
+                    <h2 className="font-bold text-lg">Membros Ativos ({aprovados.length})</h2>
                 </div>
-
                 {aprovados.length === 0 ? (
-                    <div className="text-center py-16 border-2 border-dashed rounded-3xl bg-muted/20">
-                        <ShieldAlert className="h-14 w-14 mx-auto text-muted-foreground/30 mb-4" />
-                        <h3 className="text-base font-bold uppercase">Nenhum colaborador ativo</h3>
-                        <p className="text-muted-foreground text-sm max-w-xs mx-auto mt-1">
-                            Colaboradores aprovados aparecerão aqui. Eles se cadastram e escolhem este condomínio.
-                        </p>
+                    <div className="text-center py-12 border-2 border-dashed rounded-2xl bg-muted/20">
+                        <Users className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
+                        <p className="font-bold">Nenhum colaborador ativo</p>
+                        <p className="text-sm text-muted-foreground mt-1">Colaboradores aprovados aparecerão aqui.</p>
                     </div>
                 ) : (
-                    <div className="grid gap-3">
-                        {aprovados.map((mem) => (
-                            <Card key={mem.id} className="group border-none shadow-sm bg-card/60 backdrop-blur-sm hover:shadow-md transition-all">
-                                <CardContent className="p-4 flex flex-col md:flex-row md:items-center gap-4">
-                                    <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center shrink-0">
-                                        <Users className="h-6 w-6 text-emerald-600" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-bold text-base truncate">
-                                            {(mem.profile as any)?.full_name || mem.colaborador_nome || "Colaborador"}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
-                                            <Mail className="h-3.5 w-3.5" />
-                                            {(mem.profile as any)?.email || "—"}
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-3 shrink-0">
-                                        <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-bold">
-                                            ✓ Ativo
-                                        </span>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="text-destructive opacity-40 group-hover:opacity-100 transition-opacity"
-                                            onClick={() => removerMutation.mutate(mem.id)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
+                    <div className="space-y-3">
+                        {aprovados.map((m) => <MemberCard key={m.id} m={m} showActions={false} />)}
                     </div>
                 )}
             </div>
