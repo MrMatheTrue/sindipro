@@ -42,7 +42,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
-      // First attempt: fetch with role column
       const { data, error } = await supabase
         .from("profiles")
         .select("id, full_name, email, phone, avatar_url, role")
@@ -50,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (error) {
-        // If 'role' column is missing or any other error, try a minimal fetch
+        // Fallback for missing 'role' column
         const { data: fallbackData } = await supabase
           .from("profiles")
           .select("id, full_name, email, phone, avatar_url")
@@ -64,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(data as Profile);
       }
     } catch (err) {
-      console.error("fetchProfile unexpected error:", err);
+      console.error("fetchProfile error:", err);
     }
   };
 
@@ -75,34 +74,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // 1. Initial session check
-    const checkSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        if (session?.user) {
-          // Do NOT await fetchProfile here to avoid blocking the initial load
-          fetchProfile(session.user.id);
-        }
-      } catch (e) {
-        console.error("Initial session check error:", e);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkSession();
-
-    // 2. Auth state change subscription
+    // Use onAuthStateChange as the single source of truth for session initialization
+    // It fires the current session state immediately upon subscription
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
+      (_event, currentSession) => {
         setSession(currentSession);
 
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          if (currentSession?.user) {
-            fetchProfile(currentSession.user.id);
-          }
-        } else if (event === 'SIGNED_OUT') {
+        if (currentSession?.user) {
+          fetchProfile(currentSession.user.id);
+        } else {
           setProfile(null);
         }
 
@@ -110,16 +90,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setProfile(null);
-    setSession(null);
+    try {
+      await supabase.auth.signOut();
+      setProfile(null);
+      setSession(null);
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
-  // Safe defaults: if no profile, treated as sindico to avoid blocking management
   const isSindico = !profile || profile.role === "sindico" || profile.role === "zelador" || profile.role === "funcionario";
   const isColaborador = profile?.role === "colaborador";
 
