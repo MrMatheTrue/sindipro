@@ -2,15 +2,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Loader2 } from "lucide-react";
+import { Building2, Loader2, ShieldCheck, HardHat } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+
+type Role = "sindico" | "colaborador";
 
 const Register = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [role, setRole] = useState<Role | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -19,34 +23,67 @@ const Register = () => {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!role) {
+      toast({ variant: "destructive", title: "Selecione seu papel", description: "Escolha se você é Síndico(a) ou Colaborador(a)." });
+      return;
+    }
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: name, phone },
+        data: { full_name: name, phone, role },
         emailRedirectTo: window.location.origin,
       },
     });
 
     if (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao cadastrar",
-        description: error.message,
-      });
+      toast({ variant: "destructive", title: "Erro ao cadastrar", description: error.message });
       setLoading(false);
       return;
     }
 
+    // Update profile role immediately if user was created
+    if (data.user) {
+      await supabase.from("profiles").update({ role }).eq("id", data.user.id);
+    }
+
     toast({
       title: "Cadastro realizado!",
-      description: "Bem-vindo ao SíndicoOS. Vamos configurar seu primeiro condomínio.",
+      description: role === "sindico"
+        ? "Bem-vindo! Vamos configurar seu primeiro condomínio."
+        : "Bem-vindo! Agora selecione o condomínio onde você trabalha.",
     });
     setLoading(false);
-    navigate("/onboarding");
+
+    if (role === "sindico") {
+      navigate("/onboarding");
+    } else {
+      navigate("/selecionar-condominio");
+    }
   };
+
+  const handleGoogleRegister = async () => {
+    if (!role) {
+      toast({ variant: "destructive", title: "Selecione seu papel", description: "Escolha se você é Síndico(a) ou Colaborador(a) antes de continuar." });
+      return;
+    }
+    // Store role in localStorage to be applied after OAuth redirect
+    localStorage.setItem("pending_role", role);
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`,
+        queryParams: { role }
+      }
+    });
+  };
+
+  const roles: { id: Role; label: string; desc: string; icon: React.ElementType }[] = [
+    { id: "sindico", label: "Síndico(a)", desc: "Gerencio condomínios e equipes", icon: ShieldCheck },
+    { id: "colaborador", label: "Colaborador(a)", desc: "Executo tarefas e rondas diárias", icon: HardHat },
+  ];
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 gradient-hero">
@@ -57,9 +94,40 @@ const Register = () => {
             <span className="text-xl font-bold">SíndicoOS</span>
           </Link>
           <CardTitle className="text-2xl">Crie sua conta</CardTitle>
-          <CardDescription>Comece a gerenciar seus condomínios</CardDescription>
+          <CardDescription>Primeiro, qual é o seu papel?</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          {/* Role selector */}
+          <div className="grid grid-cols-2 gap-3">
+            {roles.map(({ id, label, desc, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setRole(id)}
+                className={cn(
+                  "flex flex-col items-center gap-2 p-4 rounded-xl border-2 text-center transition-all duration-200 cursor-pointer",
+                  role === id
+                    ? "border-primary bg-primary/10 text-primary shadow-lg shadow-primary/10"
+                    : "border-border bg-card hover:border-primary/40 hover:bg-muted/50"
+                )}
+              >
+                <Icon className={cn("h-7 w-7", role === id ? "text-primary" : "text-muted-foreground")} />
+                <div>
+                  <p className="font-bold text-sm">{label}</p>
+                  <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">{desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {role && (
+            <div className="space-y-1 p-3 rounded-xl bg-primary/5 border border-primary/10 text-xs text-primary font-medium">
+              {role === "sindico"
+                ? "✓ Você terá acesso total para gerenciar condomínios, obrigações e equipes."
+                : "✓ Após o cadastro, selecione seu condomínio e aguarde aprovação do síndico."}
+            </div>
+          )}
+
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nome completo</Label>
@@ -77,14 +145,14 @@ const Register = () => {
               <Label htmlFor="password">Senha</Label>
               <Input id="password" type="password" placeholder="Mínimo 6 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} disabled={loading} />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading || !role}>
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Criar conta
             </Button>
           </form>
 
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center"><span className="w-full border-t"></span></div>
+          <div className="relative my-2">
+            <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-card px-2 text-muted-foreground">Ou continue com</span>
             </div>
@@ -93,12 +161,7 @@ const Register = () => {
           <Button
             variant="outline"
             className="w-full"
-            onClick={async () => {
-              await supabase.auth.signInWithOAuth({
-                provider: "google",
-                options: { redirectTo: `${window.location.origin}/dashboard` }
-              });
-            }}
+            onClick={handleGoogleRegister}
           >
             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
@@ -109,7 +172,7 @@ const Register = () => {
             Cadastrar com Google
           </Button>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
+          <p className="mt-4 text-center text-sm text-muted-foreground">
             Já tem conta?{" "}
             <Link to="/login" className="text-primary hover:underline font-medium">
               Entrar

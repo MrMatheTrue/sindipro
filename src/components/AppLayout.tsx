@@ -68,7 +68,7 @@ export function AppLayout() {
     }
   });
 
-  const isZelador = profile?.role === "zelador";
+  const { isColaborador } = useAuth();
 
   const initials = profile?.full_name
     ? profile.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
@@ -85,11 +85,11 @@ export function AppLayout() {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
-        {!isZelador && <AppSidebar />}
+        {!isColaborador && <AppSidebar />}
         <main className="flex-1 flex flex-col">
           <header className="h-16 flex items-center justify-between border-b px-6 shrink-0 bg-card/50 backdrop-blur-md sticky top-0 z-50">
             <div className="flex items-center gap-4">
-              {!isZelador ? <SidebarTrigger /> : <div className="font-bold text-xl tracking-tighter text-primary">SINDIPRO <span className="text-[10px] bg-primary/10 px-2 py-0.5 rounded-full ml-1">ZELADOR</span></div>}
+              {!isColaborador ? <SidebarTrigger /> : <div className="font-bold text-xl tracking-tighter text-primary">SINDIPRO <span className="text-[10px] bg-primary/10 px-2 py-0.5 rounded-full ml-1">COLABORADOR</span></div>}
             </div>
 
             <div className="flex items-center gap-4">
@@ -108,7 +108,7 @@ export function AppLayout() {
                   <div className="p-4 border-b flex items-center justify-between bg-muted/30">
                     <h3 className="font-bold text-sm">Notificações</h3>
                     {unreadCount > 0 && (
-                      <Button variant="ghost" size="sm" className="text-[10px] h-7 px-2 font-bold uppercase tracking-tight" onClick={() => markAsReadMutation.mutate()}>
+                      <Button variant="ghost" size="sm" className="text-[10px] h-7 px-2 font-bold uppercase tracking-tight" onClick={() => markAsReadMutation.mutate(undefined)}>
                         Marcar todas como lidas
                       </Button>
                     )}

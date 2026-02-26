@@ -9,18 +9,23 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { NavLink } from "@/components/NavLink";
-import { LayoutDashboard, Building2, Bot, Settings, Bell, LogOut } from "lucide-react";
+import { LayoutDashboard, Bot, Bell, Settings, LogOut, ClipboardCheck, CheckSquare } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
-const mainNav = [
+const sindicoNav = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Assistente IA", url: "/ia", icon: Bot },
   { title: "Notificações", url: "/notificacoes", icon: Bell },
 ];
 
+// Colaborador only gets Obrigacoes + Check-in (condominioId resolved from their acesso)
+const colaboradorNav = [
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+];
+
 export function AppSidebar() {
-  const { signOut } = useAuth();
+  const { signOut, isColaborador, profile } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -28,10 +33,12 @@ export function AppSidebar() {
     navigate("/login");
   };
 
+  const navItems = isColaborador ? colaboradorNav : sindicoNav;
+
   return (
     <Sidebar>
       <div className="p-4 flex items-center gap-2.5 border-b">
-        <Building2 className="h-7 w-7 text-primary" />
+        <CheckSquare className="h-7 w-7 text-primary" />
         <span className="text-lg font-bold tracking-tight">SíndicoOS</span>
       </div>
 
@@ -40,7 +47,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNav.map((item) => (
+              {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
@@ -62,14 +69,16 @@ export function AppSidebar() {
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <NavLink to="/configuracoes" className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-primary font-medium">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Configurações</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {!isColaborador && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <NavLink to="/configuracoes" className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-primary font-medium">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Configurações</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
                 <SidebarMenuItem>
                   <SidebarMenuButton onClick={handleSignOut} className="hover:bg-sidebar-accent cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />

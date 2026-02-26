@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, CheckCircle, Calendar as CalendarIcon, AlertCircle, Edit, Trash2, Loader2, Info, ArrowLeft } from "lucide-react";
+import { Plus, CheckCircle, Calendar as CalendarIcon, AlertCircle, Edit, Trash2, Loader2, Info, ArrowLeft, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,11 +14,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState } from "react";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Obrigacoes = () => {
     const { id } = useParams();
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const { isColaborador } = useAuth();
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingObrigacao, setEditingObrigacao] = useState<any>(null);
 
@@ -118,67 +120,71 @@ const Obrigacoes = () => {
                     </Button>
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Obrigações</h1>
-                        <p className="text-muted-foreground mt-1">Manutenção preventiva e prazos legais do condomínio.</p>
+                        <p className="text-muted-foreground mt-1">
+                            {isColaborador ? "Visualize as obrigações e prazos do condomínio." : "Manutenção preventiva e prazos legais do condomínio."}
+                        </p>
                     </div>
                 </div>
-                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                    <DialogTrigger asChild>
-                        <Button className="shadow-lg shadow-orange-500/20 bg-orange-600 hover:bg-orange-700">
-                            <Plus className="mr-2 h-4 w-4" /> Nova Obrigação
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px]">
-                        <DialogHeader>
-                            <DialogTitle>Cadastrar Obrigação</DialogTitle>
-                        </DialogHeader>
-                        <div className="grid grid-cols-2 gap-4 py-4">
-                            <div className="col-span-2 space-y-2">
-                                <Label>Nome da Obrigação</Label>
-                                <Input placeholder="Ex: Recarga de Extintores" value={nome} onChange={(e) => setNome(e.target.value)} />
-                            </div>
-                            <div className="col-span-2 space-y-2">
-                                <Label>Descrição</Label>
-                                <Textarea placeholder="Detalhes sobre a obrigação..." value={descricao} onChange={(e) => setDescricao(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Última Realização</Label>
-                                <Input type="date" value={dataUltima} onChange={(e) => setDataUltima(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Periodicidade (dias)</Label>
-                                <Input type="number" value={periodicidade} onChange={(e) => setPeriodicidade(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Criticidade</Label>
-                                <Select value={criticidade} onValueChange={setCriticidade}>
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="baixa">Baixa</SelectItem>
-                                        <SelectItem value="media">Média</SelectItem>
-                                        <SelectItem value="alta">Alta</SelectItem>
-                                        <SelectItem value="critica">Crítica</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Alerta antecipado (dias)</Label>
-                                <Input type="number" value={alerta} onChange={(e) => setAlerta(e.target.value)} />
-                            </div>
-                            <div className="col-span-2 space-y-2">
-                                <Label>Responsável (Nome/Empresa)</Label>
-                                <Input placeholder="Ex: ABC Extintores LTDA" value={responsavel} onChange={(e) => setResponsavel(e.target.value)} />
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancelar</Button>
-                            <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
-                                {createMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Salvar Obrigação"}
+                {!isColaborador && (
+                    <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="shadow-lg shadow-orange-500/20 bg-orange-600 hover:bg-orange-700">
+                                <Plus className="mr-2 h-4 w-4" /> Nova Obrigação
                             </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[600px]">
+                            <DialogHeader>
+                                <DialogTitle>Cadastrar Obrigação</DialogTitle>
+                            </DialogHeader>
+                            <div className="grid grid-cols-2 gap-4 py-4">
+                                <div className="col-span-2 space-y-2">
+                                    <Label>Nome da Obrigação</Label>
+                                    <Input placeholder="Ex: Recarga de Extintores" value={nome} onChange={(e) => setNome(e.target.value)} />
+                                </div>
+                                <div className="col-span-2 space-y-2">
+                                    <Label>Descrição</Label>
+                                    <Textarea placeholder="Detalhes sobre a obrigação..." value={descricao} onChange={(e) => setDescricao(e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Última Realização</Label>
+                                    <Input type="date" value={dataUltima} onChange={(e) => setDataUltima(e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Periodicidade (dias)</Label>
+                                    <Input type="number" value={periodicidade} onChange={(e) => setPeriodicidade(e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Criticidade</Label>
+                                    <Select value={criticidade} onValueChange={setCriticidade}>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="baixa">Baixa</SelectItem>
+                                            <SelectItem value="media">Média</SelectItem>
+                                            <SelectItem value="alta">Alta</SelectItem>
+                                            <SelectItem value="critica">Crítica</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Alerta antecipado (dias)</Label>
+                                    <Input type="number" value={alerta} onChange={(e) => setAlerta(e.target.value)} />
+                                </div>
+                                <div className="col-span-2 space-y-2">
+                                    <Label>Responsável (Nome/Empresa)</Label>
+                                    <Input placeholder="Ex: ABC Extintores LTDA" value={responsavel} onChange={(e) => setResponsavel(e.target.value)} />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancelar</Button>
+                                <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
+                                    {createMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Salvar Obrigação"}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                )}
             </div>
 
             <Card className="border-none shadow-sm overflow-hidden">
@@ -220,17 +226,21 @@ const Obrigacoes = () => {
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <div className="flex justify-end gap-1">
-                                            <Button variant="ghost" size="icon" onClick={() => registerRealization.mutate(o)} title="Registrar Realização Hoje">
-                                                <CheckCircle className="h-4 w-4 text-emerald-500" />
-                                            </Button>
-                                            <Button variant="ghost" size="icon">
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="icon" className="text-destructive">
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
+                                        {isColaborador ? (
+                                            <span className="text-xs text-muted-foreground italic">Somente leitura</span>
+                                        ) : (
+                                            <div className="flex justify-end gap-1">
+                                                <Button variant="ghost" size="icon" onClick={() => registerRealization.mutate(o)} title="Registrar Realização Hoje">
+                                                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon">
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="text-destructive">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))}

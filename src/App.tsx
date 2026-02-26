@@ -20,6 +20,8 @@ import Onboarding from "./pages/Onboarding";
 import IAChat from "./pages/IAChat";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import SelecionarCondominio from "./pages/SelecionarCondominio";
+import AguardandoAprovacao from "./pages/AguardandoAprovacao";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +36,9 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            {/* Public post-registration flows (no ProtectedRoute guard needed) */}
+            <Route path="/selecionar-condominio" element={<SelecionarCondominio />} />
+            <Route path="/aguardando-aprovacao" element={<AguardandoAprovacao />} />
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/onboarding" element={<Onboarding />} />
