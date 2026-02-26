@@ -184,8 +184,8 @@ function ColaboradorDashboard() {
               <div key={o.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 gap-2">
                 <p className="text-sm font-medium truncate flex-1">{o.nome}</p>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase border shrink-0 ${o.status === "vencida" ? "bg-red-500/10 text-red-600 border-red-200" :
-                    o.status === "atencao" ? "bg-amber-500/10 text-amber-600 border-amber-200" :
-                      "bg-emerald-500/10 text-emerald-600 border-emerald-200"
+                  o.status === "atencao" ? "bg-amber-500/10 text-amber-600 border-amber-200" :
+                    "bg-emerald-500/10 text-emerald-600 border-emerald-200"
                   }`}>
                   {o.status?.replace("_", " ")}
                 </span>
@@ -227,12 +227,18 @@ const Dashboard = () => {
   }
 
   const { data: condominios, isLoading } = useQuery({
-    queryKey: ["condominios"],
+    queryKey: ["condominios", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("condominios").select("*").order("created_at", { ascending: false });
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("condominios")
+        .select("*")
+        .eq("sindico_id", user.id)
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
+    enabled: !!user,
   });
 
   const { data: obrigacoes } = useQuery({

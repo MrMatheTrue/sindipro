@@ -75,7 +75,11 @@ const Register = () => {
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/dashboard`,
-        queryParams: { role }
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+          role: role
+        }
       }
     });
   };

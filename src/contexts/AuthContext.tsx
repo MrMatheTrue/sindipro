@@ -77,11 +77,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Use onAuthStateChange as the single source of truth for session initialization
     // It fires the current session state immediately upon subscription
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, currentSession) => {
+      async (_event, currentSession) => {
         setSession(currentSession);
 
         if (currentSession?.user) {
-          fetchProfile(currentSession.user.id);
+          // Apply pending role from OAuth if exists
+          const pendingRole = localStorage.getItem("pending_role");
+          if (pendingRole) {
+            try {
+              await supabase.from("profiles").upsert({
+                id: currentSession.user.id,
+                role: pendingRole,
+                full_name: currentSession.user.user_metadata?.full_name || "",
+                email: currentSession.user.email || "",
+              });
+              localStorage.removeItem("pending_role");
+            } catch (err) {
+              console.error("Error applying pending role:", err);
+            }
+          }
+
+          await fetchProfile(currentSession.user.id);
         } else {
           setProfile(null);
         }
@@ -102,11 +118,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(null);
     } catch (error) {
       console.error("Error signing out:", error);
+    } finally {
+      // Clear everything just in case
+      setProfile(null);
+      setSession(null);
     }
   };
 
-  const isSindico = !profile || profile.role === "sindico" || profile.role === "zelador" || profile.role === "funcionario";
-  const isColaborador = profile?.role === "colaborador";
+  // STRICT defaults: if no profile is loaded yet, the user has NO permissions.
+  // This prevents the "flash" of admin access during loading or for guest users.
+  const isSindico = !!profile && (profile.role === "sindico" || profile.role === "zelador" || profile.role === "funcionario");
+  const isColaborador = !!profile && profile.role === "colaborador";
 
   return (
     <AuthContext.Provider value={{
