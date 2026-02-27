@@ -28,11 +28,11 @@ interface Obrigacao {
     data_ultima_realizacao: string | null;
     data_proxima_realizacao: string | null;
     periodicidade_dias: number;
-    criticidade: Criticidade;
+    criticidade: string;
     dias_alerta_antecipado: number;
     responsavel_nome: string | null;
     observacoes: string | null;
-    status: StatusObrigacao;
+    status: string;
     created_at: string;
     updated_at: string;
 }
@@ -259,7 +259,7 @@ const Obrigacoes = () => {
         setDescricao(o.descricao || "");
         setDataUltima(o.data_ultima_realizacao || "");
         setPeriodicidade(String(o.periodicidade_dias));
-        setCriticidade(o.criticidade);
+        setCriticidade(o.criticidade as Criticidade);
         setAlerta(String(o.dias_alerta_antecipado));
         setResponsavel(o.responsavel_nome || "");
         setObs(o.observacoes || "");

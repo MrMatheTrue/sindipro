@@ -285,7 +285,7 @@ export type Database = {
         Row: {
           condominio_id: string
           created_at: string
-          criticidade: Database["public"]["Enums"]["criticidade"]
+          criticidade: string
           data_proxima_realizacao: string | null
           data_ultima_realizacao: string | null
           descricao: string | null
@@ -295,13 +295,13 @@ export type Database = {
           observacoes: string | null
           periodicidade_dias: number
           responsavel_nome: string | null
-          status: Database["public"]["Enums"]["status_obrigacao"]
+          status: string
           updated_at: string
         }
         Insert: {
           condominio_id: string
           created_at?: string
-          criticidade?: Database["public"]["Enums"]["criticidade"]
+          criticidade?: string
           data_proxima_realizacao?: string | null
           data_ultima_realizacao?: string | null
           descricao?: string | null
@@ -311,13 +311,13 @@ export type Database = {
           observacoes?: string | null
           periodicidade_dias?: number
           responsavel_nome?: string | null
-          status?: Database["public"]["Enums"]["status_obrigacao"]
+          status?: string
           updated_at?: string
         }
         Update: {
           condominio_id?: string
           created_at?: string
-          criticidade?: Database["public"]["Enums"]["criticidade"]
+          criticidade?: string
           data_proxima_realizacao?: string | null
           data_ultima_realizacao?: string | null
           descricao?: string | null
@@ -327,7 +327,7 @@ export type Database = {
           observacoes?: string | null
           periodicidade_dias?: number
           responsavel_nome?: string | null
-          status?: Database["public"]["Enums"]["status_obrigacao"]
+          status?: string
           updated_at?: string
         }
         Relationships: [
@@ -420,6 +420,47 @@ export type Database = {
           },
         ]
       }
+      usuarios_operacionais: {
+        Row: {
+          ativo: boolean
+          condominio_id: string
+          created_at: string
+          criado_por: string
+          email: string
+          id: string
+          nome: string
+          perfil: Database["public"]["Enums"]["perfil_operacional"]
+        }
+        Insert: {
+          ativo?: boolean
+          condominio_id: string
+          created_at?: string
+          criado_por: string
+          email: string
+          id?: string
+          nome: string
+          perfil?: Database["public"]["Enums"]["perfil_operacional"]
+        }
+        Update: {
+          ativo?: boolean
+          condominio_id?: string
+          created_at?: string
+          criado_por?: string
+          email?: string
+          id?: string
+          nome?: string
+          perfil?: Database["public"]["Enums"]["perfil_operacional"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usuarios_operacionais_condominio_id_fkey"
+            columns: ["condominio_id"]
+            isOneToOne: false
+            referencedRelation: "condominios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -456,7 +497,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "sindico" | "funcionario" | "zelador" | "colaborador"
+      app_role: "sindico" | "funcionario" | "zelador" | "colaborador" | "admin"
       criticidade: "baixa" | "media" | "alta" | "critica"
       frequencia_tarefa: "diaria" | "semanal" | "mensal" | "personalizada"
       nivel_acesso: "total" | "leitura" | "tarefas_only"
