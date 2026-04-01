@@ -47,9 +47,9 @@ export function AppLayout() {
 
   const markAsReadMutation = useMutation({
     mutationFn: async (id?: string) => {
-      const query = supabase.from("notificacoes").update({ lida: true }).eq("user_id", user!.id);
-      if (id) query.eq("id", id);
-      else query.eq("lida", false);
+      let query = supabase.from("notificacoes").update({ lida: true }).eq("user_id", user!.id);
+      if (id) query = query.eq("id", id);
+      else query = query.eq("lida", false);
       const { error } = await query;
       if (error) throw error;
     },
